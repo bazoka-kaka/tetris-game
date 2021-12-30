@@ -1,6 +1,6 @@
 package com.tetris;
 
-
+import java.awt.event.WindowListener;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -12,19 +12,29 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Formatter;
 import java.util.Random;
+import java.util.Scanner;
 
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
-public class Board extends JPanel implements KeyListener, MouseListener, MouseMotionListener {
+public class Board extends JPanel implements KeyListener, MouseListener, MouseMotionListener{
 
 	//Assets
     /**
      *
      */
     private static final long serialVersionUID = 1L;
+    
+    public static int highScore;
+    
+    private Formatter formatter;
 
     private BufferedImage pause, refresh;
 
@@ -74,10 +84,19 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
     });
 
 	// score
-    private int score = 0;
+    public static int score = 0;
+    
+    private int index;
+    
+    //level
+    private int level = 0;
+    private int nextLevel = 5;
+    
+    //file
+    private Scanner scanner;
 
     public Board() {
-
+    	index = 2;
         pause = ImageLoader.loadImage("/pause.png");
         refresh = ImageLoader.loadImage("/refresh.png");
 
@@ -125,9 +144,8 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
             {1, 1},
             {1, 1}, // O shape;
         }, this, colors[6]);
-
     }
-
+    
     private void update() {
         if (stopBounds.contains(mouseX, mouseY) && leftClick && !buttonLapse.isRunning() && !gameOver) {
             buttonLapse.start();
@@ -135,14 +153,38 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
         }
 
         if (refreshBounds.contains(mouseX, mouseY) && leftClick) {
+            
             startGame();
         }
 
         if (gamePaused || gameOver) {
             return;
         }
+        
+        if(score >= highScore && index >= 0) {
+        	highScore = Title.scores[index--];
+        	repaint();
+        } else if(score >= highScore && index < 0) {
+        	highScore = score;
+        	repaint();
+        }
+        
         currentShape.update();
     }
+    
+    
+    
+    public void readFile() {
+    	int count = 0;
+        while(scanner.hasNext() && count++ < 3) {
+            String a = scanner.next();
+            String b = scanner.next();
+
+            System.out.printf("%s %s\n", a, b);
+        }
+    }
+
+    
 
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -198,10 +240,21 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
         g.setColor(Color.WHITE);
 
         g.setFont(new Font("Georgia", Font.BOLD, 20));
-
-        g.drawString("SCORE", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2);
-        g.drawString(score + "", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 + 30);
-
+        
+        //drawing next level at
+        g.drawString("NEXT LV@", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 - 100);
+        g.drawString(nextLevel + "", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 - 70);
+        
+        //drawing score
+        g.drawString("NEXT HIGH", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 - 40);
+        g.drawString(highScore + "", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 - 10);
+        g.drawString("SCORE", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 + 20);
+        g.drawString(score + "", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 + 50);
+        
+        //drawing level
+        g.drawString("LEVEL", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 + 80);
+        g.drawString(level + "", WindowGame.WIDTH - 125, WindowGame.HEIGHT / 2 + 110);
+        
         g.setColor(Color.WHITE);
 
         for (int i = 0; i <= boardHeight; i++) {
@@ -213,6 +266,13 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
     }
 
     public void setNextShape() {
+    	//update the level
+    	if(score % nextLevel == 0 && score != 0) {
+        	level++;
+        	nextLevel *= 2;
+        	Shape.normal -= 5 * level;
+        	System.out.println(Shape.normal);
+        }
         int index = random.nextInt(shapes.length);
         int colorIndex = random.nextInt(colors.length);
         nextShape = new Shape(shapes[index].getCoords(), this, colors[colorIndex]);
@@ -252,6 +312,7 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
         if (e.getKeyCode() == KeyEvent.VK_DOWN) {
             currentShape.speedUp();
         }
+        
     }
 
     @Override
@@ -271,12 +332,16 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
         setNextShape();
         setCurrentShape();
         gameOver = false;
+        index = 2;
+        highScore = Title.scores[index];
+        nextLevel = 5;
+        repaint();
         looper.start();
-
     }
 
     public void stopGame() {
         score = 0;
+        level = 0;
 
         for (int row = 0; row < board.length; row++) {
             for (int col = 0; col < board[row].length; col++) {
@@ -340,5 +405,4 @@ public class Board extends JPanel implements KeyListener, MouseListener, MouseMo
     public void addScore() {
         score++;
     }
-
 }
