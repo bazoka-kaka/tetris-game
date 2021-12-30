@@ -12,7 +12,7 @@ public class Shape {
 
     private long time, lastTime;
 
-    private int normal = 600, fast = 50;
+    public static int normal = 600, fast = 50;
 
     private int delay;
 
